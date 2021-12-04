@@ -1,8 +1,10 @@
 #include<avr/io.h>
 #include<util/delay.h>
+
 #include"i2c.h"
 #include"SSD1306.h"
 #include"uart.h"
+#include"bitmaps.h"
 
 #define LED PB5
 
@@ -25,15 +27,38 @@ int main(void){
     uart_init(9600);
     
     clear_display();
+    uint8_t i;
+    for (i = 0; i < 4; i++){
+        write_field(2+(i*6), 5+offsets_vertical[i], 5, 8, test_writing[i], 5);
+    }
+    for (i = 0; i < 4; i++){
+        write_field(30+(i*6), 5+offsets_vertical[i], 5, 8, test_writing[i], 5);
+    }
+    for (i = 0; i < 4; i++){
+        write_field(2+(i*6), 17+offsets_vertical[i], 5, 8, test_writing[i], 5);
+    }
+    for (i = 0; i < 4; i++){
+        write_field(30+(i*6), 17+offsets_vertical[i], 5, 8, test_writing[i], 5);
+    }
+    for (i = 0; i < 4; i++){
+        write_field(90+(i*6), 21+offsets_vertical[i], 5, 8, test_writing[i], 5);
+    }
 
-    blink();
+    _delay_ms(2000);
 
-    uint8_t bitmap[10] = {0xAA, 0xAA, 0xAA, 0x55, 0x55, 0x55, 0xFF, 0xFF, 0xFF, 0xFF};
-    write_field(60, 13, 10, 8, bitmap, sizeof(bitmap));
-    //uint8_t dupa = 0xFF;
-    //write_field(20, 5, 1, 8, &dupa, 1);
+    clear_display();
+    write_field(0, 0, 128, 32, cat, sizeof(cat));
 
-    write_field(0, 0, 10, 8, bitmap, 4);
+    _delay_ms(2000);
+
+    clear_display();
+    write_field(0, 0, 4, 16, bitmap, sizeof(bitmap));
+
+    _delay_ms(2000);
+
+    clear_display();
+    write_field(0, 0, 128, 32, Dachshund, sizeof(Dachshund));
+
 
     while (1){
         blink();

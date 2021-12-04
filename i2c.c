@@ -86,7 +86,7 @@ uint8_t i2c_write(uint8_t address, uint8_t data){
 }
 
 uint8_t i2c_send_chunk(uint8_t address, uint16_t size, uint8_t* data){
-	uint8_t i;
+	uint16_t i;
 	TWCR |= (1<<TWINT);
 	TWCR |= (1<<TWSTA);										//send start bit
 	while (! (TWCR & (1<<TWINT)));

@@ -2,6 +2,7 @@
 #include"uart.h"
 #include"i2c.h"
 #include"SSD1306.h"
+#include"verdana_7.h"
 
 
 void SSD1306_init(uint8_t height){
@@ -23,14 +24,14 @@ void SSD1306_init(uint8_t height){
 void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
                     uint8_t* data, uint16_t data_length){
     
-    uint8_t size_y;
+    uint8_t size_y; //= size_y_pix/8;
     uint8_t start_y;
     uint8_t offset = start_y_pix%8; 
-    uint8_t offset_mask = 0x80;
+    uint8_t offset_mask_MS = 0x80;
+    uint8_t offset_mask_LS;
     uint8_t pwr;
     uart_init(9600);
     send_frame(offset);
-
     if(size_y_pix%8 == 0){                  //compensate if size is bigger than a page
         size_y = size_y_pix/8;
     } else{
@@ -43,10 +44,16 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
         start_y = (start_y_pix/8);
         size_y += 1;
         for(pwr = 1; pwr < offset; pwr++){  //define offset mask
-            offset_mask = offset_mask|(offset_mask>>1);
+            offset_mask_MS = offset_mask_MS|(offset_mask_MS>>1);
         }
     }
-    send_frame(offset_mask);
+    offset_mask_LS = offset_mask_MS>>(8-offset);
+
+    send_frame('a');
+    send_frame(offset_mask_MS);
+    send_frame('a');
+    send_frame(offset_mask_LS);
+    
     uint8_t addressing_mode[3] = {CMD_CHAIN, SET_ADDR_MODE, HORIZONTAL_ADDR_MODE};
     i2c_send_chunk(DSPL_ADDR, sizeof(addressing_mode), addressing_mode);
 
@@ -60,40 +67,19 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
     uint8_t buffer[length];
     buffer[0] = DATA_CHAIN;
 
-    //single page bitmaps working, now to implement handling bigger bitmaps
     uint16_t i;
-    for(i = 0; i<size_x; i++){          //first line of data
-        buffer[i+1] = (*(data + i))<<offset;
+    uint8_t page = 1;
+    for(i = 1; i<sizeof(buffer); i++){
+        buffer[i] = 0;
     }
-    for(i = 0; i<data_length; i++){     
-        if(i >= data_length-size_x){
-            buffer[size_x+i+1] = *(data+i)&offset_mask; 
-            buffer[size_x+i+1] = buffer[size_x+i+1]>>(8-offset);
-        }
+
+    for(i = 0; i<data_length; i++){  
+            buffer[i+1] |= ((*(data + i))<<offset);  
+            buffer[i+size_x+1] |= ((*(data+i)&offset_mask_MS)>>(8-offset));
+            if(i%(size_x-1) == 0 && i != 0) page++;
     }
-    /*if(data_length == size_x){
-        i = 0;
-    } else{ 
-        i = size_x;
-    }
-    for(i; i < data_length; i++){
-        if(i > data_length-size_x){
-            
-        buffer[i+1] |= 0x00|(*(data + (i-size_x))|offset_mask);
-        send_frame((uint8_t) 'a');
-        send_frame(*(data+i-size_x));
-        send_frame(buffer[i+1]);
-        } else{
-            buffer[i+1] = *(data + (i-size_x))|offset_mask;
-            buffer[i+1] |= *(data + (i+size_x))|~offset_mask;
-            send_frame((uint8_t) 'b');
-            send_frame(*(data+i-size_x));
-            send_frame(buffer[i+1]);
-        }
-    }*/
 
     i2c_send_chunk(DSPL_ADDR, sizeof(buffer), buffer);
-
 }
 
 void clear_display(void){
