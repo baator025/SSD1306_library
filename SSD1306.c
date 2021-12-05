@@ -2,7 +2,7 @@
 #include"uart.h"
 #include"i2c.h"
 #include"SSD1306.h"
-#include"verdana_7.h"
+#include"Verdana_7.h"
 
 
 void SSD1306_init(uint8_t height){
@@ -107,4 +107,31 @@ void clear_display(void){
     display_command[0] = CMD_CHAIN;
     display_command[1] = DSPL_ON;
     i2c_send_chunk(DSPL_ADDR, sizeof(display_command), display_command);
+}
+
+void print(char* string, uint8_t length){
+    uint8_t i;
+    for(i=0; i<length; i++){
+        uint8_t index = (uint8_t) *(string+i) - 32;
+
+        uint16_t byte_offset_start = *(*(verdana_7ptDescriptors+index)+2);
+        uint16_t sign_size = *(*(verdana_7ptDescriptors+index+1)+2) - *(*(verdana_7ptDescriptors+index)+2);
+        uint16_t sign_height = *(*(verdana_7ptDescriptors+index)+1);
+        if(sign_height < 8) sign_height = 8;
+        uint16_t sign_width = *(*(verdana_7ptDescriptors+index)+0);
+
+        uint16_t buffer_length;
+        if(sign_height%8 == 0){
+            buffer_length = sign_width*(sign_height/8);
+        }else{ 
+            buffer_length = sign_width*(sign_height/8)+1; 
+        }
+        uint8_t buffer[buffer_length];
+        uint8_t j;
+        for(j = 0; j < sign_size; j++){
+            *(buffer+j) = *(verdana_7ptBitmaps+byte_offset_start+j);
+        }
+
+        write_field(6*i, 0, sign_width, sign_height, buffer, buffer_length);
+    }
 }
