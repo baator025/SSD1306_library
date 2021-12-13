@@ -3,8 +3,6 @@
 
 #include"i2c.h"
 #include"SSD1306.h"
-#include"uart.h"
-//#include"bitmaps.h"
 
 #define LED PB5
 
@@ -21,50 +19,21 @@ void blink(void){
 }
 
 int main(void){
-    blink();
+
     i2c_init();
     SSD1306_init(32);
-    uart_init(9600);
-    
+    blink();
+
     clear_display();
-    // uint8_t i;
-    // for (i = 0; i < 4; i++){
-    //     write_field(2+(i*6), 5+offsets_vertical[i], 5, 8, test_writing[i], 5);
-    // }
-    // for (i = 0; i < 4; i++){
-    //     write_field(30+(i*6), 5+offsets_vertical[i], 5, 8, test_writing[i], 5);
-    // }
-    // for (i = 0; i < 4; i++){
-    //     write_field(2+(i*6), 17+offsets_vertical[i], 5, 8, test_writing[i], 5);
-    // }
-    // for (i = 0; i < 4; i++){
-    //     write_field(30+(i*6), 17+offsets_vertical[i], 5, 8, test_writing[i], 5);
-    // }
-    // for (i = 0; i < 4; i++){
-    //     write_field(90+(i*6), 21+offsets_vertical[i], 5, 8, test_writing[i], 5);
-    // }
-
-    // _delay_ms(2000);
-
-    // clear_display();
-    // write_field(0, 0, 128, 32, cat, sizeof(cat));
-
-    // _delay_ms(2000);
-
-    // clear_display();
-    // write_field(0, 0, 4, 16, bitmap, sizeof(bitmap));
-
-    // _delay_ms(2000);
-
-    // clear_display();
-    // write_field(0, 0, 128, 32, Dachshund, sizeof(Dachshund));
-    char string[] = "dudi dudi";
-    print(string, sizeof(string));
+    char string[] = "!~ASDFGHJK";
+    char string2[] = "opqrstuvwxyz~";
+    print(string, sizeof(string), 0, 0);
+    print(string2, sizeof(string2), 0, 16);
+    _delay_ms(1000);
 
 
     while (1){
         blink();
-        //print("dupa", 4);
     }
 
     return(0);

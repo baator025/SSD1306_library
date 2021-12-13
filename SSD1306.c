@@ -1,8 +1,21 @@
 #include<avr/io.h>
-#include"uart.h"
 #include"i2c.h"
 #include"SSD1306.h"
 #include"Verdana_7.h"
+#define LED PB5
+#include <util/delay.h>
+
+void blink1(void){
+    DDRB |= (1 << LED);
+
+    PORTB |= (1 << LED);
+    _delay_ms(125);
+    PORTB &= ~(1 << LED);
+    _delay_ms(125);
+    PORTB |= (1 << LED);
+    _delay_ms(1500);
+    PORTB &= ~(1 << LED);
+}
 
 
 void SSD1306_init(uint8_t height){
@@ -24,19 +37,11 @@ void SSD1306_init(uint8_t height){
 void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
                     uint8_t* data, uint16_t data_length){
     
-    uint8_t size_y; //= size_y_pix/8;
+    uint8_t size_y = size_y_pix/8; 
     uint8_t start_y;
     uint8_t offset = start_y_pix%8; 
     uint8_t offset_mask_MS = 0x80;
-    uint8_t offset_mask_LS;
     uint8_t pwr;
-    uart_init(9600);
-    send_frame(offset);
-    if(size_y_pix%8 == 0){                  //compensate if size is bigger than a page
-        size_y = size_y_pix/8;
-    } else{
-        size_y = (size_y_pix/8)+1;
-    }
 
     if(start_y_pix%8 == 0){                 //compensate if start point is in a middle of a page
         start_y = start_y_pix/8;
@@ -47,16 +52,9 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
             offset_mask_MS = offset_mask_MS|(offset_mask_MS>>1);
         }
     }
-    offset_mask_LS = offset_mask_MS>>(8-offset);
-
-    send_frame('a');
-    send_frame(offset_mask_MS);
-    send_frame('a');
-    send_frame(offset_mask_LS);
     
     uint8_t addressing_mode[3] = {CMD_CHAIN, SET_ADDR_MODE, HORIZONTAL_ADDR_MODE};
     i2c_send_chunk(DSPL_ADDR, sizeof(addressing_mode), addressing_mode);
-
 
     //no idea why one needs to be subtracted from x size
     uint8_t field_definition[7] = {CMD_CHAIN, SET_COLUMN_START_END, start_x, start_x+size_x-1,
@@ -109,29 +107,40 @@ void clear_display(void){
     i2c_send_chunk(DSPL_ADDR, sizeof(display_command), display_command);
 }
 
-void print(char* string, uint8_t length){
+void print(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
     uint8_t i;
-    for(i=0; i<length; i++){
-        uint8_t index = (uint8_t) *(string+i) - 32;
+    uint8_t x = start_x;
+    uint8_t y = start_y;
+    uint8_t spacing = 1;
 
+    for(i=0; i<(length-1); i++){
+        if((uint8_t) *(string+i) < 32){
+            break;
+        }
+        uint8_t index = (uint8_t) *(string+i) - 32;
+        uint16_t sign_size;
         uint16_t byte_offset_start = *(*(verdana_7ptDescriptors+index)+2);
-        uint16_t sign_size = *(*(verdana_7ptDescriptors+index+1)+2) - *(*(verdana_7ptDescriptors+index)+2);
+        if(*(string+i) == '~'){
+            sign_size = *(*(verdana_7ptDescriptors+index)+0);
+        } else{
+            sign_size = *(*(verdana_7ptDescriptors+index+1)+2) - *(*(verdana_7ptDescriptors+index)+2);
+        }            
         uint16_t sign_height = *(*(verdana_7ptDescriptors+index)+1);
-        if(sign_height < 8) sign_height = 8;
+        if(sign_height%8!=0){
+            sign_height = ((sign_height/8)+1)*8;
+        }
         uint16_t sign_width = *(*(verdana_7ptDescriptors+index)+0);
 
         uint16_t buffer_length;
-        if(sign_height%8 == 0){
-            buffer_length = sign_width*(sign_height/8);
-        }else{ 
-            buffer_length = sign_width*(sign_height/8)+1; 
-        }
+        buffer_length = sign_width*(sign_height/8);
+
         uint8_t buffer[buffer_length];
         uint8_t j;
         for(j = 0; j < sign_size; j++){
             *(buffer+j) = *(verdana_7ptBitmaps+byte_offset_start+j);
         }
 
-        write_field(6*i, 0, sign_width, sign_height, buffer, buffer_length);
+        write_field(x, y+*(*(verdana_7ptDescriptors+index)+3), sign_width, sign_height, buffer, buffer_length);
+        x = x+sign_width+spacing;
     }
 }

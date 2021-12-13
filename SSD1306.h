@@ -60,4 +60,4 @@ uint8_t draw_line();
 void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
                     uint8_t* data, uint16_t length);
 void clear_display(void);
-void print(char* string, uint8_t length);
+void print(char* string, uint8_t length, uint8_t start_x, uint8_t start_y);
