@@ -55,6 +55,15 @@
 #define SET_COLUMN_START_END 0x21
 #define SET_PAGE_START_END 0x22
 
+#include<avr/pgmspace.h>
+#include"i2c.h"
+#include"Verdana_7.h"
+
+//debug
+#include"debug/uart.h"
+#include<util/delay.h>
+
+
 void SSD1306_init(uint8_t height);
 uint8_t draw_line();
 void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 

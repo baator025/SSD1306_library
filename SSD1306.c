@@ -1,7 +1,8 @@
+//Add font by including header file. Header file, besides definitions, should contain font macros
+//All fonts and bitmaps should be written in progmem
+
 #include<avr/io.h>
-#include"i2c.h"
 #include"SSD1306.h"
-#include"Verdana_7.h"
 #define LED PB5
 #include <util/delay.h>
 
@@ -36,7 +37,7 @@ void SSD1306_init(uint8_t height){
 
 void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
                     uint8_t* data, uint16_t data_length){
-    
+
     uint8_t size_y = size_y_pix/8; 
     uint8_t start_y;
     uint8_t offset = start_y_pix%8; 
@@ -80,6 +81,7 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
     i2c_send_chunk(DSPL_ADDR, sizeof(buffer), buffer);
 }
 
+
 void clear_display(void){
     uint8_t addressing_mode[3] = {CMD_CHAIN, SET_ADDR_MODE, HORIZONTAL_ADDR_MODE};
     i2c_send_chunk(DSPL_ADDR, sizeof(addressing_mode), addressing_mode);
@@ -107,40 +109,94 @@ void clear_display(void){
     i2c_send_chunk(DSPL_ADDR, sizeof(display_command), display_command);
 }
 
+
 void print(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
+    uart_init(9600);
     uint8_t i;
     uint8_t x = start_x;
     uint8_t y = start_y;
     uint8_t spacing = 1;
 
+    uint8_t index;
+    uint16_t byte_offset_start;
+    uint16_t sign_width;
+    uint16_t sign_size;
+    uint16_t sign_height;
+    uint8_t sign_vertical_offset;
+    uint16_t buffer_length;
+
     for(i=0; i<(length-1); i++){
         if((uint8_t) *(string+i) < 32){
-            break;
+        break;
         }
-        uint8_t index = (uint8_t) *(string+i) - 32;
-        uint16_t sign_size;
-        uint16_t byte_offset_start = *(*(verdana_7ptDescriptors+index)+2);
-        if(*(string+i) == '~'){
-            sign_size = *(*(verdana_7ptDescriptors+index)+0);
-        } else{
-            sign_size = *(*(verdana_7ptDescriptors+index+1)+2) - *(*(verdana_7ptDescriptors+index)+2);
-        }            
-        uint16_t sign_height = *(*(verdana_7ptDescriptors+index)+1);
-        if(sign_height%8!=0){
-            sign_height = ((sign_height/8)+1)*8;
-        }
-        uint16_t sign_width = *(*(verdana_7ptDescriptors+index)+0);
 
-        uint16_t buffer_length;
-        buffer_length = sign_width*(sign_height/8);
+        if(*(string+i) < 'V'){
+            index = (uint8_t)* (string+i) - 32;
+            byte_offset_start = pgm_read_byte(&FONT_DESCRIPTORS_1[index][2]);
+            sign_width = pgm_read_byte(&FONT_DESCRIPTORS_1[index][0]); 
+            sign_size = sign_width;
+            sign_height = pgm_read_byte(&FONT_DESCRIPTORS_1[index][1]);
+            if(sign_height%8!=0){
+                sign_height = ((sign_height/8)+1)*8;
+            }
+            sign_vertical_offset = pgm_read_byte(&FONT_DESCRIPTORS_1[index][3]);
+
+            buffer_length = sign_width*(sign_height/8);
+        } else{
+            index = (uint8_t)* (string+i) - 32 - 54;
+            byte_offset_start = pgm_read_byte(&FONT_DESCRIPTORS_2[index][2]);
+            sign_width = pgm_read_byte(&FONT_DESCRIPTORS_2[index][0]); 
+            sign_size = sign_width;
+            sign_height = pgm_read_byte(&FONT_DESCRIPTORS_2[index][1]);
+            if(sign_height%8!=0){
+                sign_height = ((sign_height/8)+1)*8;
+            }
+            sign_vertical_offset = pgm_read_byte(&FONT_DESCRIPTORS_2[index][3]);
+            send_frame(*(string+i));
+            send_frame(sign_size);
+            buffer_length = sign_width*(sign_height/8);
+        } 
 
         uint8_t buffer[buffer_length];
         uint8_t j;
-        for(j = 0; j < sign_size; j++){
-            *(buffer+j) = *(verdana_7ptBitmaps+byte_offset_start+j);
+        if(*(string+i) < 'V'){
+            for(j = 0; j < sign_size; j++){
+                *(buffer+j) = pgm_read_byte(&FONT_BITMAPS_1[byte_offset_start+j]);
+            }
+        }else{
+            for(j = 0; j < sign_size; j++){
+                *(buffer+j) = pgm_read_byte(&FONT_BITMAPS_2[byte_offset_start+j]);
+            }    
         }
+    
 
-        write_field(x, y+*(*(verdana_7ptDescriptors+index)+3), sign_width, sign_height, buffer, buffer_length);
+        // if(*(string+i) == 'V'){
+        //     uint8_t dupa = (uint8_t)* (string+i) - 32;
+        //     uint8_t dupa2 = pgm_read_word(&FONT_DESCRIPTORS[dupa+1][2]) - pgm_read_word(&FONT_DESCRIPTORS[dupa][2]);
+        //     uart_init(9600);
+        //     send_frame(pgm_read_byte(&FONT_DESCRIPTORS[dupa][2]));
+        //     send_frame(dupa2);
+        //     continue;
+        // }
+
+
+        // uint16_t byte_offset_start = *(*(verdana_7ptDescriptors+index)+2);
+        // if(*(string+i) == '~'){
+        //     sign_size = sign_width;
+        //     // sign_size = *(*(verdana_7ptDescriptors+index)+0);
+        // } else{
+        //     sign_size = pgm_read_word(&FONT_DESCRIPTORS[index+1][2]) - pgm_read_word(&FONT_DESCRIPTORS[index][2]);
+        //     // sign_size = *(*(verdana_7ptDescriptors+index+1)+2) - *(*(verdana_7ptDescriptors+index)+2);
+        // }            
+        // send_frame(*(string+i));
+        // send_frame(sign_size);
+        
+        // uint16_t sign_height = *(*(verdana_7ptDescriptors+index)+1);
+
+        
+        // uint16_t sign_width = *(*(verdana_7ptDescriptors+index)+0);
+
+        write_field(x, y+sign_vertical_offset, sign_width, sign_height, buffer, buffer_length);
         x = x+sign_width+spacing;
     }
 }
