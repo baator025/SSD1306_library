@@ -1,14 +1,13 @@
 #include "SSD1306.h"
 
-
 void SSD1306_init(uint8_t height){
 
     uint8_t mux_ratio = height-1;
 
-    uint8_t init_sequence[24] = {CMD_CHAIN, DSPL_OFF, SET_OSC_FREQ, OSC_FREQ, 
+    uint8_t init_sequence[24] = {CMD_CHAIN, DSPL_OFF, SET_OSC_FREQ, OSC_FREQ,
                                 SET_MUX_RATIO, mux_ratio, SET_DSPL_OFFSET, DSPL_OFFSET,
-                                DSPL_START_LINE, CHRG_PMP_SETTING, CHRG_PMP_ON, SGMT_REMAP, 
-                                COM_OUTPT_SCAN_DIR, SET_COM_HW_CONF, SET_CONTRAST, CONTRAST, 
+                                DSPL_START_LINE, CHRG_PMP_SETTING, CHRG_PMP_ON, SGMT_REMAP,
+                                COM_OUTPT_SCAN_DIR, SET_COM_HW_CONF, SET_CONTRAST, CONTRAST,
                                 SET_PRECHRG_PERIOD, PRECHRG_PERIOD, SET_VCOMH_DSLCT_VAL, VCOMH_DSLCT_VAL,
                                 DISABLE_ENTIRE_DPSL_ON, SET_NRML_DSPL, SCROLL_DEACTIV, DSPL_ON};
 
@@ -17,15 +16,15 @@ void SSD1306_init(uint8_t height){
 
 
 //this function with handle situation, in which bitmap needs to be written from any starting point
-//which doesn't need to be also a starting point of a page. Function expects bitmap encoded in bytes 
+//which doesn't need to be also a starting point of a page. Function expects bitmap encoded in bytes
 //corresponding to pages.
 
-void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
+void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix,
                     uint8_t* data, uint16_t data_length){
 
-    uint8_t size_y = size_y_pix/8; 
+    uint8_t size_y = size_y_pix/8;
     uint8_t start_y;
-    uint8_t offset = start_y_pix%8; 
+    uint8_t offset = start_y_pix%8;
     uint8_t offset_mask = 0x80;
     uint8_t pwr;
 
@@ -38,7 +37,7 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
             offset_mask = offset_mask|(offset_mask>>1);
         }
     }
-    
+
     //define borders of field on SSD1306
     uint8_t addressing_mode[3] = {CMD_CHAIN, SET_ADDR_MODE, HORIZONTAL_ADDR_MODE};
     i2c_send_chunk(DSPL_ADDR, sizeof(addressing_mode), addressing_mode);
@@ -46,7 +45,7 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
     uint8_t field_definition[7] = {CMD_CHAIN, SET_COLUMN_START_END, start_x, start_x+size_x-1,
                                     SET_PAGE_START_END, start_y, start_y+size_y};
     i2c_send_chunk(DSPL_ADDR, sizeof(field_definition), field_definition);
-  
+
     //create a buffer for a bitmap in order to add command and offset the data if necessary:
     uint16_t length = (size_x * size_y) + 1;
     uint8_t buffer[length];
@@ -57,9 +56,9 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
         buffer[i] = 0;
     }
 
-    //algorithm offseting the bitmap, if first pixel of a bitmap is in a middle of SSD1306's page  
-    for(i = 0; i<data_length; i++){  
-            buffer[i+1] |= ((*(data + i))<<offset);  
+    //algorithm offseting the bitmap, if first pixel of a bitmap is in a middle of SSD1306's page
+    for(i = 0; i<data_length; i++){
+            buffer[i+1] |= ((*(data + i))<<offset);
             buffer[i+size_x+1] |= ((*(data+i)&offset_mask)>>(8-offset));
             if(i%(size_x-1) == 0 && i != 0) page++;
     }
@@ -71,12 +70,12 @@ void write_field(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t s
 
 //variant of write field, which can be used for printing bitmaps from flash memory
 
-void write_field_flash(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix, 
-                    const __flash uint8_t* data, uint16_t data_length){
+void write_field_flash(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uint8_t size_y_pix,
+                    const MEMORY_PREFIX uint8_t* data, uint16_t data_length){
 
-    uint8_t size_y = size_y_pix/8; 
+    uint8_t size_y = size_y_pix/8;
     uint8_t start_y;
-    uint8_t offset = start_y_pix%8; 
+    uint8_t offset = start_y_pix%8;
     uint8_t offset_mask = 0x80;
     uint8_t pwr;
 
@@ -89,7 +88,7 @@ void write_field_flash(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uin
             offset_mask = offset_mask|(offset_mask>>1);
         }
     }
-    
+
     //define borders of field on SSD1306
     uint8_t addressing_mode[3] = {CMD_CHAIN, SET_ADDR_MODE, HORIZONTAL_ADDR_MODE};
     i2c_send_chunk(DSPL_ADDR, sizeof(addressing_mode), addressing_mode);
@@ -97,7 +96,7 @@ void write_field_flash(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uin
     uint8_t field_definition[7] = {CMD_CHAIN, SET_COLUMN_START_END, start_x, start_x+size_x-1,
                                     SET_PAGE_START_END, start_y, start_y+size_y};
     i2c_send_chunk(DSPL_ADDR, sizeof(field_definition), field_definition);
-  
+
     //create a buffer for a bitmap in order to add command and offset the data if necessary:
     uint16_t length = (size_x * size_y) + 1;
     uint8_t buffer[length];
@@ -108,9 +107,9 @@ void write_field_flash(uint8_t start_x, uint8_t start_y_pix, uint8_t size_x, uin
         buffer[i] = 0;
     }
 
-    //algorithm offseting the bitmap, if first pixel of a bitmap is in a middle of SSD1306's page  
-    for(i = 0; i<data_length; i++){  
-            buffer[i+1] |= ((*(data + i))<<offset);  
+    //algorithm offseting the bitmap, if first pixel of a bitmap is in a middle of SSD1306's page
+    for(i = 0; i<data_length; i++){
+            buffer[i+1] |= ((*(data + i))<<offset);
             buffer[i+size_x+1] |= ((*(data+i)&offset_mask)>>(8-offset));
             if(i%(size_x-1) == 0 && i != 0) page++;
     }
@@ -133,14 +132,23 @@ void clear_display(void){
     display_command[1] = DSPL_OFF;
     i2c_send_chunk(DSPL_ADDR, sizeof(display_command), display_command);
 
-    uint16_t i; 
+    uint8_t empty_page_val = 0;
+    #ifdef LOW_LEVEL_I2C_ACCESS
+    uint16_t i;
     i2c_send_start();
     i2c_send_address(DSPL_ADDR, 'w');
     i2c_send_byte(DATA_CHAIN);
     for(i = 0; i < 512; i++){
-        i2c_send_byte(0);
+        i2c_send_byte(empty_page_val);
     }
     i2c_send_stop();
+    #else
+    uint16_t page_counter;
+    for(page_counter = 0; page_counter < 512; page_counter++){
+        i2c_send_chunk(DSPL_ADDR, sizeof(empty_page_val), &empty_page_val);
+    }
+    #endif
+
 
     display_command[0] = CMD_CHAIN;
     display_command[1] = DSPL_ON;
@@ -170,7 +178,7 @@ void print(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
         //extract glyph dimensions and offsets:
         index = (uint8_t)* (string+i) - 32;
         byte_offset_start = verdana_7ptDescriptors[index][2];               //descriptor array name
-        sign_width = verdana_7ptDescriptors[index][0];                      //descriptor array name        
+        sign_width = verdana_7ptDescriptors[index][0];                      //descriptor array name
         sign_height = verdana_7ptDescriptors[index][1];                     //descriptor array name
         if(sign_height%8!=0){
             sign_size = ((sign_height/8)+1)*sign_width;
@@ -181,7 +189,7 @@ void print(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
         sign_vertical_offset = verdana_7ptDescriptors[index][3];            //descriptor array name
 
         //extract glyph bitmap and save it in a buffer:
-        buffer_length = sign_width*(sign_height/8); 
+        buffer_length = sign_width*(sign_height/8);
         uint8_t buffer[buffer_length];
         uint8_t j;
         for(j = 0; j < sign_size; j++){
@@ -217,7 +225,7 @@ void print_big(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
         //extract glyph dimensions and offsets:
         index = (uint8_t)* (string+i) - 32;
         byte_offset_start = verdana_11ptDescriptors[index][2];               //descriptor array name
-        sign_width = verdana_11ptDescriptors[index][0];                      //descriptor array name        
+        sign_width = verdana_11ptDescriptors[index][0];                      //descriptor array name
         sign_height = verdana_11ptDescriptors[index][1];                     //descriptor array name
         if(sign_height%8!=0){
             sign_size = ((sign_height/8)+1)*sign_width;
@@ -228,7 +236,7 @@ void print_big(char* string, uint8_t length, uint8_t start_x, uint8_t start_y){
         sign_vertical_offset = verdana_11ptDescriptors[index][3];            //descriptor array name
 
         //extract glyph bitmap and save it in a buffer:
-        buffer_length = sign_width*(sign_height/8); 
+        buffer_length = sign_width*(sign_height/8);
         uint8_t buffer[buffer_length];
         uint8_t j;
         for(j = 0; j < sign_size; j++){

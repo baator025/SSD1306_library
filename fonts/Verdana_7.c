@@ -1,7 +1,7 @@
 #include"Verdana_7.h"
 
 /* Character bitmaps for Verdana 7pt */
-__flash const uint8_t verdana_7ptBitmaps[417] = 
+MEMORY_PREFIX const uint8_t verdana_7ptBitmaps[417] = 
 {
 	/* @0 ' ' (2 pixels wide) */
 	//   
@@ -912,7 +912,7 @@ __flash const uint8_t verdana_7ptBitmaps[417] =
 
 /* Character descriptors for Verdana 7pt */
 /* { [Char width in bits], [Char height in bits], [Offset into verdana_7ptCharBitmaps in bytes], [vertical offset] } */
-__flash const uint16_t verdana_7ptDescriptors[95][4] = 
+MEMORY_PREFIX const uint16_t verdana_7ptDescriptors[95][4] = 
 {
     {2, 8, 0, 0}, 		/*   */ 
     {1, 7, 2, 1}, 		/* ! */ 

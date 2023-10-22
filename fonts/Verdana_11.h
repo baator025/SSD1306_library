@@ -1,4 +1,4 @@
-#include <avr/io.h>
+#include "../SSD1306_platforms_config.h"
 
-extern __flash const uint8_t verdana_11ptBitmaps[1157];
-extern __flash const uint16_t verdana_11ptDescriptors[95][4];
+extern MEMORY_PREFIX const uint8_t verdana_11ptBitmaps[1157];
+extern MEMORY_PREFIX const uint16_t verdana_11ptDescriptors[95][4];
